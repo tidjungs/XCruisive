@@ -153,6 +153,15 @@ PT_THREAD(taskCancel(struct pt* pt)) {
   {
     if(digitalRead(SW1) == 0){
       alert = 0;
+      Serial1.println("cancel");
+    }
+    if(Serial1.available()) {
+      String str = Serial1.readStringUntil('\r');
+      str.replace("\r","");
+      str.replace("\n","");
+      if(str == "cancel"){
+        alert = 0;
+      }
     }
     PT_DELAY(pt, 100, ts);
   }
