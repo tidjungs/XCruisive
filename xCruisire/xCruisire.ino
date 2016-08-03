@@ -17,7 +17,7 @@ struct pt pt_taskTemp;
 struct pt pt_taskCancel;
 
 int duration , distance;
-int maximumRange = 200;
+int maximumRange = 1000;
 int minimumRange = 0;
 int alert = 0;
 
@@ -116,8 +116,8 @@ PT_THREAD(taskSendSerial(struct pt* pt)){
   while (1){
 //    Serial1.println(distance);
 //    Serial.println(distance);
-    Serial.println(String(xAng) + "," + String(yAng) + "," + String(zAng)  + "," + String(temp));
-    Serial1.println(String(xAng) + "," + String(yAng) + "," + String(zAng) + "," + String(temp));
+    Serial.println(String(xAng) + "," + String(yAng) + "," + String(zAng)  + "," + String(temp) + "," + String(distance));
+    Serial1.println(String(xAng) + "," + String(yAng) + "," + String(zAng) + "," + String(temp) + "," + String(distance));
     PT_DELAY(pt, 1000, ts);
   }
   PT_END(pt);
@@ -151,8 +151,10 @@ PT_THREAD(taskCancel(struct pt* pt)) {
 
   while (1)
   {
-    Serial.println("switch " + digitalRead(SW1));
-    PT_DELAY(pt, 1000, ts);
+    if(digitalRead(SW1) == 0){
+      alert = 0;
+    }
+    PT_DELAY(pt, 100, ts);
   }
 
   PT_END(pt);
@@ -206,12 +208,12 @@ void setup() {
 }
 
 void loop() {
-//  taskUltrasonic(&pt_taskUltrasonic);
+  taskUltrasonic(&pt_taskUltrasonic);
   taskReadSerial(&pt_taskReadSerial);
   taskTemp(&pt_taskTemp);
   taskBuzzer(&pt_taskBuzzer);
   taskLED(&pt_taskLED);
   taskAccele(&pt_taskAccele);
   taskSendSerial(&pt_taskSendSerial);
-//  taskCancel(&pt_taskCancel);
+  taskCancel(&pt_taskCancel);
 }
