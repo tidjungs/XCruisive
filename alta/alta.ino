@@ -5,6 +5,7 @@
 
 #define PIN_ULTRA_TRIG 12
 #define PIN_ULTRA_ECHO 11
+#define SW1 2
 
 struct pt pt_taskUltrasonic;
 struct pt pt_taskSendSerial;
@@ -12,12 +13,22 @@ struct pt pt_taskReadSerial;
 struct pt pt_taskBuzzer;
 struct pt pt_taskLED;
 struct pt pt_taskAccele;
+struct pt pt_taskTemp;
+struct pt pt_taskCancel;
 
 int duration , distance;
 int maximumRange = 200;
 int minimumRange = 0;
 int alert = 0;
 
+const int xPin = A1;
+const int yPin = A2;
+const int zPin = A3;
+int minVal = 265;
+int maxVal = 402;
+int x, y, z;
+int xRead, yRead, zRead, xAng, yAng, zAng;
+int temp;
 PT_THREAD(taskUltrasonic(struct pt* pt)) {
   static uint32_t ts;
 
@@ -37,21 +48,30 @@ PT_THREAD(taskUltrasonic(struct pt* pt)) {
     PT_DELAY(pt, 5000, ts);
   }
 
-////////////////////////////////////////////////////////////////
   PT_END(pt);
 }
+////////////////////////////////////////////////////////////////
+PT_THREAD(taskTemp(struct pt* pt)){
+  static uint32_t ts;
+  PT_BEGIN(pt);
+  while (1){
+    temp = (25*analogRead(A2) - 2050)/100;
+    PT_DELAY(pt, 1000, ts);
+
+  }
+  PT_END(pt);
+}
+////////////////////////////////////////////////////////////////
 
 PT_THREAD(taskReadSerial(struct pt* pt)){
   static uint32_t ts;
   PT_BEGIN(pt);
   while (1){
     if(Serial1.available()) {
-      Serial.print("hello2");
       String str = Serial1.readStringUntil('\r');
       str.replace("\r","");
       str.replace("\n","");
-      Serial.println(str);
-      if(str == "alarm"){
+      if(str == "alert"){
         alert = 1;
       }
     }
@@ -63,13 +83,6 @@ PT_THREAD(taskReadSerial(struct pt* pt)){
 ////////////////////////////////////////////////////////////
 PT_THREAD(taskAccele(struct pt* pt)) {
   static uint32_t ts;
-  const int xPin = 0;
-  const int yPin = 1;
-  const int zPin = 2;
-  int minVal = 265;
-  int maxVal = 402;
-  double x, y, z;
-  int xRead, yRead, zRead, xAng, yAng, zAng;
   PT_BEGIN(pt);
   while(1) {
     xRead = analogRead(xPin);
@@ -84,14 +97,14 @@ PT_THREAD(taskAccele(struct pt* pt)) {
     y = RAD_TO_DEG * (atan2(-xAng, -zAng) + PI);
     z = RAD_TO_DEG * (atan2(-yAng, -xAng) + PI);
 
-    Serial.print("x: ");
-    Serial.print(x);
-    Serial.print(" | y: ");
-    Serial.print(y);
-    Serial.print(" | z: ");
-    Serial.println(z);
-
-    PT_DELAY(pt,100,ts);
+//    Serial.print("x: ");
+//    Serial.print(xAng);
+//    Serial.print(" | y: ");
+//    Serial.print(yAng);
+//    Serial.print(" | z: ");
+//    Serial.println(zAng);
+//    Serial1.println(String(xAng) + "," + String(yAng) + "," + String(zAng));
+    PT_DELAY(pt,1000,ts);
   }
   PT_END(pt);
 }
@@ -101,9 +114,11 @@ PT_THREAD(taskSendSerial(struct pt* pt)){
   static uint32_t ts;
   PT_BEGIN(pt);
   while (1){
-    Serial1.println(distance);
-    Serial.println(distance);
-    PT_DELAY(pt, 5000, ts);
+//    Serial1.println(distance);
+//    Serial.println(distance);
+    Serial.println(String(xAng) + "," + String(yAng) + "," + String(zAng)  + "," + String(temp));
+    Serial1.println(String(xAng) + "," + String(yAng) + "," + String(zAng) + "," + String(temp));
+    PT_DELAY(pt, 1000, ts);
   }
   PT_END(pt);
 }
@@ -128,7 +143,20 @@ PT_THREAD(taskBuzzer(struct pt* pt))
 
   PT_END(pt);
 }
+///////////////////////////////////////////////////////
+PT_THREAD(taskCancel(struct pt* pt)) {
+  static uint32_t ts;
 
+  PT_BEGIN(pt);
+
+  while (1)
+  {
+    Serial.println("switch " + digitalRead(SW1));
+    PT_DELAY(pt, 1000, ts);
+  }
+
+  PT_END(pt);
+}
 ///////////////////////////////////////////////////////
 PT_THREAD(taskLED(struct pt* pt))
 {
@@ -139,12 +167,12 @@ PT_THREAD(taskLED(struct pt* pt))
   while (1)
   {
     if(alert == 1) {
-      digitalWrite(11, HIGH);
+//      digitalWrite(11, HIGH);
       digitalWrite(12, HIGH);
       digitalWrite(13, HIGH);
       digitalWrite(14, HIGH);
       PT_DELAY(pt, 700, ts);
-      digitalWrite(11, LOW);
+//      digitalWrite(11, LOW);
       digitalWrite(12, LOW);
       digitalWrite(13, LOW);
       digitalWrite(14, LOW);
@@ -163,6 +191,8 @@ void setup() {
   pinMode(10, OUTPUT);
   pinMode(13, OUTPUT);
   pinMode(14, OUTPUT);
+  pinMode(A2, INPUT);
+  pinMode(SW1, INPUT);
   Serial.begin(9600);
   Serial1.begin(115200);
   PT_INIT(&pt_taskUltrasonic);
@@ -171,13 +201,17 @@ void setup() {
   PT_INIT(&pt_taskBuzzer);
   PT_INIT(&pt_taskLED);
   PT_INIT(&pt_taskAccele);
+  PT_INIT(&pt_taskTemp);
+  PT_INIT(&pt_taskCancel);
 }
 
 void loop() {
-  taskUltrasonic(&pt_taskUltrasonic);
-//  taskSendSerial(&pt_taskSendSerial);
+//  taskUltrasonic(&pt_taskUltrasonic);
   taskReadSerial(&pt_taskReadSerial);
+  taskTemp(&pt_taskTemp);
   taskBuzzer(&pt_taskBuzzer);
   taskLED(&pt_taskLED);
   taskAccele(&pt_taskAccele);
+  taskSendSerial(&pt_taskSendSerial);
+//  taskCancel(&pt_taskCancel);
 }
