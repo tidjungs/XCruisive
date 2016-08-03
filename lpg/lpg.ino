@@ -1,19 +1,11 @@
-int adcPin = 0;
-int adcValue = 0;
-float v;
-float rs,ppm;
-void setup ()
+void setup()
 {
-  Serial.begin (9600);
-  delay (2000);
+  Serial.begin(9600); //Set serial baud rate to 9600 bps
 }
-void loop () {
-  adcValue = analogRead(adcPin);
-  v = adcValue*(5.00/1024);
-  rs=(100-(20.00*v))/v;
-  Serial.print("Volt output");
-  Serial.println (v);
-  Serial.print("RS=");
-  Serial.println (rs);
-  delay (1000);
+void loop()
+{
+int val;
+val=analogRead(0); //Read Gas value from analog 0
+Serial.println(val,DEC);//Print the value to serial port
+delay(100);
 }
