@@ -43,7 +43,6 @@ PT_THREAD(taskReadSerial(struct pt* pt)){
   static uint32_t ts;
   PT_BEGIN(pt);
   while (1){
-    Serial.print("hello");
     if(Serial1.available()) {
       Serial.print("hello2");
       String str = Serial1.readStringUntil('\r');
@@ -79,11 +78,12 @@ PT_THREAD(taskBuzzer(struct pt* pt))
   while (1)
   {
     if(alert == 1) {
-      analogWrite(10, 00);
+      analogWrite(10, 100);
       PT_DELAY(pt, 1000, ts);
       analogWrite(10, 0);
       PT_DELAY(pt, 500, ts);
     }
+    PT_DELAY(pt, 100, ts);
   }
  
   PT_END(pt);
@@ -110,6 +110,7 @@ PT_THREAD(taskLED(struct pt* pt))
       digitalWrite(14, LOW);
       PT_DELAY(pt, 300, ts);   
     }
+    PT_DELAY(pt, 100, ts);
   }
  
   PT_END(pt);
