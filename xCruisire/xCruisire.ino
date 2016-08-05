@@ -35,6 +35,7 @@ int x, y, z;
 int xRead, yRead, zRead, xAng, yAng, zAng;
 int temp = 0;
 
+String str = "";
 
 // check for update
 bool shouldUpdate = false;
@@ -43,6 +44,9 @@ int lastTemp;
 int lastAdcValue;
 int lastX;
 int lastY;
+
+int minGas = 100;
+int maxGas = 300;
 
 PT_THREAD(taskUltrasonic(struct pt* pt)) {
   static uint32_t ts;
@@ -82,7 +86,7 @@ PT_THREAD(taskTemp(struct pt* pt)){
   PT_BEGIN(pt);
   while (1){
     lastTemp = temp;
-    temp = (25*analogRead(A2) - 2050)/100;
+    temp = (25*analogRead(A5) - 2050)/100;
     if(abs(lastTemp - temp) >= 3) {
       shouldUpdate = true;
     }
@@ -97,14 +101,15 @@ PT_THREAD(taskReadSerial(struct pt* pt)){
   PT_BEGIN(pt);
   while (1){
     if(Serial1.available()) {
-      String str = Serial1.readStringUntil('\r');
+      str = Serial1.readStringUntil('\r');
       str.replace("\r","");
       str.replace("\n","");
       if(str == "alert"){
         alert = 1;
+        Serial1.print("alert1");
       }
     }
-    PT_YIELD(pt);
+    PT_DELAY (pt, 100, ts);
   }
   PT_END(pt);
 }
@@ -116,7 +121,7 @@ PT_THREAD(taskAccele(struct pt* pt)) {
   while(1) {
     lastX = xAng;
     lastY = yAng;
-    
+
     xRead = analogRead(xPin);
     yRead = analogRead(yPin);
     zRead = analogRead(zPin);
@@ -125,7 +130,7 @@ PT_THREAD(taskAccele(struct pt* pt)) {
     yAng = map(yRead, minVal, maxVal, -90, 90);
     zAng = map(zRead, minVal, maxVal, -90, 90);
     if(abs(lastX - xAng) >= 30 || abs(lastY - yAng) >= 30) {
-      shouldUpdate = true; 
+      shouldUpdate = true;
     }
 //    Serial.print("last ");
 //    Serial.println(abs(lastX - xAng));
@@ -184,14 +189,15 @@ PT_THREAD(taskCancel(struct pt* pt)) {
       Serial1.println("cancel");
     }
     if(Serial1.available()) {
-      String str = Serial1.readStringUntil('\r');
+      str = Serial1.readStringUntil('\r');
       str.replace("\r","");
       str.replace("\n","");
-      if(str == "cancel"){
+      Serial.println(str);
+      if(str == "cancel1"){
         alert = 0;
       }
     }
-    PT_DELAY(pt, 100, ts);
+    PT_DELAY (pt, 100, ts);
   }
 
   PT_END(pt);
@@ -229,16 +235,16 @@ PT_THREAD(taskSmoke(struct pt* pt)){
   while(1) {
     lastAdcValue = adcValue;
     adcValue = analogRead(adcPin);
-    if(lastAdcValue <= 100 && adcValue > 100) {
+    if(lastAdcValue <= minGas && adcValue > minGas) {
       shouldUpdate = true;
     }
-    else if ((lastAdcValue > 100 && lastAdcValue <= 300) && adcValue > 300) {
+    else if ((lastAdcValue > minGas && lastAdcValue <= maxGas) && adcValue > maxGas) {
       shouldUpdate = true;
     }
-    else if (lastAdcValue > 100 && adcValue < 100) {
+    else if (lastAdcValue > minGas && adcValue <= minGas) {
       shouldUpdate = true;
     }
-    else if (lastAdcValue > 300 && adcValue <= 300) {
+    else if (lastAdcValue > maxGas && adcValue <= maxGas) {
       shouldUpdate = true;
     }
     else if (lastAdcValue == 0) {
@@ -272,7 +278,7 @@ void setup() {
   pinMode(10, OUTPUT);
   pinMode(13, OUTPUT);
   pinMode(14, OUTPUT);
-  pinMode(A2, INPUT);
+  pinMode(A5, INPUT);
   pinMode(adcPin, INPUT);
   pinMode(SW1, INPUT);
   Serial.begin(9600);
@@ -290,14 +296,14 @@ void setup() {
 }
 
 void loop() {
-//  taskUltrasonic(&pt_taskUltrasonic);
-//  taskSmoke(&pt_taskSmoke); 
-//  taskTemp(&pt_taskTemp);
-//  taskAccele(&pt_taskAccele);
-//  taskSendSerial(&pt_taskSendSerial);
-//  taskTest(&pt_taskTest);
-//  taskReadSerial(&pt_taskReadSerial);
-//  taskBuzzer(&pt_taskBuzzer);
-//  taskLED(&pt_taskLED);
-//  taskCancel(&pt_taskCancel);
+ taskUltrasonic(&pt_taskUltrasonic);
+ taskSmoke(&pt_taskSmoke);
+ taskTemp(&pt_taskTemp);
+ taskAccele(&pt_taskAccele);
+ taskSendSerial(&pt_taskSendSerial);
+ taskTest(&pt_taskTest);
+ taskReadSerial(&pt_taskReadSerial);
+ taskBuzzer(&pt_taskBuzzer);
+ taskLED(&pt_taskLED);
+ taskCancel(&pt_taskCancel);
 }
